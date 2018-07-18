@@ -153,7 +153,7 @@ function woocommerce_asoribapay_init(){
             
 
 		 
-			  $response = wp_remote_post('https://paymentsandbox.asoriba.com/payment/v1.0/initialize', array(
+			  $response = wp_remote_post('https://payment.asoriba.com/payment/v1.0/initialize', array(
 				'method' => 'POST',
 				'headers' => array('Content-Type' => 'application/json',
 									'Accept' => 'application/json',
@@ -202,7 +202,7 @@ function woocommerce_asoribapay_init(){
 
             $transaction_id = $_GET['transaction_uuid'];
 		 
-            if ( $_GET['status'] == 'successful') {
+            if ( $_GET['status_code'] == '100') {
                 // complete payment and redirect to thank you page
                
     
@@ -220,7 +220,7 @@ function woocommerce_asoribapay_init(){
                 exit;
     
               
-            } elseif($_GET['status'] == 'pending'){
+            } elseif($_GET['status_code'] == '0000'){
                 //redirect to storefront
                 $order->update_status('processing', 'ID: ' . $transaction_id ." " );
                 $woocommerce->cart->empty_cart();
@@ -228,7 +228,7 @@ function woocommerce_asoribapay_init(){
                 wc_add_notice(  'You have cancelled your order. Your cart has been emptied', 'notice' );
                 return;
 
-            }elseif($_GET['status'] == 'Cancel'){
+            }elseif($_GET['status_code'] == '632'){
                 //redirect to storefront
                 $order->update_status('cancelled', 'ID: ' . $transaction_id ." " );
                 $woocommerce->cart->empty_cart();
@@ -242,7 +242,7 @@ function woocommerce_asoribapay_init(){
                 $cleaned = str_replace('_', ' ', $str);
                 $separated = explode(", ",$cleaned);
                 
-                $error = "The following fields require attention ";
+                $error = "The following fields require attention: ";
                 foreach($separated as $value){
                     if (!empty($value)){
                         
