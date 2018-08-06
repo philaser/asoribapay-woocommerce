@@ -1,15 +1,45 @@
 <?php
 /*
-Plugin Name:AsoribaPay payment gateway for Woocommerce
-Plugin URI: http://www.asoriba.com
-Description: AsoribaPay gateway for woocommerce
-Version: 0.2
-WC requires at least: 3.0
-WC tested up to: 3.2
-Author: Asoriba Inc
-Author URI: http://www.asoriba.com
+* Plugin Name:AsoribaPay payment gateway for Woocommerce
+* Plugin URI: http://woocommerce.com/products/asoribapay-gateway/
+* Description: AsoribaPay gateway for woocommerce
+* Version: 0.4
+* Author: Woocommerce
+* Author URI: http://woocommerce.com/
+* Developer: Asoriba Inc
+* Developer URI: https://asoriba.com/
+* Text Domain: asoribapay-payment-gateway-for-woocommerce
+*   
+* Woo: 12345:342928dfsfhsf8429842374wdf4234sfd
+* WC requires at least: 2.2
+* WC tested up to: 3.4
+*
+* Copyright: © 2009-2018 WooCommerce.
+* License: GNU General Public License v3.0
+* License URI: http://www.gnu.org/licenses/gpl-3.0.html
 */
+
+
 add_action('plugins_loaded', 'woocommerce_asoribapay_init', 0);
+// hook and function for setting image file
+add_action( 'wp_ajax_myprefix_get_image', 'myprefix_get_image');
+
+function myprefix_get_image() {
+
+      if(isset($_GET['id']) ){
+          $image = wp_get_attachment_image( filter_input( INPUT_GET, 'id', FILTER_VALIDATE_INT ), 'thumbnail', true, array( 'id' => 'myprefix-preview-image' ) );
+          update_option('myprefix_image_id', filter_input( INPUT_GET, 'id', FILTER_VALIDATE_INT ));
+          $data = array(
+              'image'    => $image,
+          );
+          wp_send_json_success( $data );
+      } else {
+          wp_send_json_error();
+      }
+      wp_die();
+  } 
+
+
 function woocommerce_asoribapay_init(){
   if(!class_exists('WC_Payment_Gateway')) return;
 
@@ -25,23 +55,26 @@ function woocommerce_asoribapay_init(){
       $this -> title = $this -> settings['title'];
       $this -> description = $this -> settings['description'];
       $this -> api_key = $this -> settings['api_key'];
-      $this -> image = $this -> settings['image'];
+      $this -> image = get_option( 'myprefix_image_url' );
       
 
       $this -> msg['message'] = "";
       $this -> msg['class'] = "";
-
+      
+      // For the Media Selector
+      
       add_action('init', array(&$this, 'init_payment_url'));
+      add_action( 'admin_enqueue_scripts', array(&$this, 'load_wp_media_files'));
+
+        
       if ( version_compare( WOOCOMMERCE_VERSION, '2.0.0', '>=' ) ) {
                 add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( &$this, 'process_admin_options' ) );
              } else {
                 add_action( 'woocommerce_update_options_payment_gateways', array( &$this, 'process_admin_options' ) );
             }
-      add_action('woocommerce_receipt_payu', array(&$this, 'receipt_page'));
       add_action('woocommerce_api_asoribapay', array(&$this, 'verify_payment'));
-      add_action('woocommerce_api_asoribapaytest', array(&$this, 'verify_momo_payment'));
    }
-
+   
 
     function init_form_fields(){
 
@@ -70,46 +103,68 @@ function woocommerce_asoribapay_init(){
                 'title'       => 'API Key',
                 'type'        => 'text',
                 'default'	  => 'your API key goes here'
-            ),
-            'image' => array(
-                'title'       => 'Payment page image',
-                'type'        => 'file',
-                'default'	  => 'This image will be displayed on the payment page'
             )
         );
     }
 
+
+    public function load_wp_media_files() {
+
+          // Enqueue WordPress media scripts
+          wp_enqueue_media();
+          // Enqueue custom script that will interact with wp.media
+          wp_enqueue_script( 'myprefix_script', plugins_url( '/js/myscript.js' , __FILE__ ), array('jquery'), '0.6' );
+      }
+
+      
+
+
        public function admin_options(){
+        $image_id = get_option( 'myprefix_image_id' );
+
+        if( intval( $image_id ) > 0 ) {
+            // Change with the image size you want to use
+            $image = wp_get_attachment_image( $image_id, 'thumbnail', true, array( 'id' => 'myprefix-preview-image' ) );
+            $image_url =  wp_get_attachment_image_src($image_id, 'thumbnail', true);
+          update_option('myprefix_image_url', $image_url[0]);
+        } else {
+            // Some default image
+            $image = '<img id="myprefix-preview-image" width="50px" height="50px" src="https://asoribawebsite.com/wp-content/uploads/2017/10/app-logo.png" />';
+            $image_url = "https://asoribawebsite.com/wp-content/uploads/2017/10/app-logo.png";
+            update_option('myprefix_image_url', $image_url);
+        }
+        
         echo '<h3>'.__('AsoribaPay Payment Gateway', 'asoriba').'</h3>';
         echo '<p>'.__('AsoribaPay is an innovative way of paying for your stuff').'</p>';
         echo '<table class="form-table">';
         // Generate the HTML For the settings form.
         $this -> generate_settings_html();
+        //HTML for the image selector
+        ?><tr>
+        
+        <td align="left">
+        <Label> <strong>Payment page image</strong> </Label>
+        </td>
+        <td align="right">
+        <?php echo $image; ?>
+        </td>
+        <td align="left">
+        <input type="hidden" name="myprefix_image_id" id="myprefix_image_id" value="<?php echo esc_attr( $image_id ); ?>" class="regular-text" />
+        <input type='button' class="button-primary" value="<?php esc_attr_e( 'Select and save image', 'mytextdomain' ); ?>" id="myprefix_media_manager"/>
+        </td>
+
+        </tr>
+        <?php
+
         echo '</table>';
 
     }
 
     /**
-     *  There are no payment fields for payu, but we want to show the description if set.
+     *  There are no payment fields for AsoribaPay, but we want to show the description if set.
      **/
     function payment_fields(){
         if($this -> description) echo wpautop(wptexturize($this -> description));
-    }
-    /**
-     * Receipt Page
-     **/
-    function receipt_page($order){
-        echo '<p>'.__('Thank you for your order, please click the button below to pay with PayU.', 'asoriba').'</p>';
-        echo $this -> generate_payu_form($order);
-    }
-    /**
-     * Generate payu button link
-     **/
-    public function init_payment_url($order_id){
-
-       
-
-
     }
     /**
      * Process the payment and return the result
@@ -125,7 +180,6 @@ function woocommerce_asoribapay_init(){
             
 
 
-		 
             
             $callback = home_url( '/' ) . 'wc-api/asoribapay';
 
@@ -186,7 +240,6 @@ function woocommerce_asoribapay_init(){
 				return;
 			}
     }
-
 
     function verify_payment(){
 
@@ -266,124 +319,8 @@ function woocommerce_asoribapay_init(){
     }
 
 
-    function verify_momo_payment(){
-
-        $order_id = $_POST['order_id'];
-        $order = wc_get_order($order_id);
-
-        $order->update_status('failed', 'momo worked ! ' );
-
-        return;
-
-    }
-
-    /**
-     * Check for valid payu server callback
-     **/
-    function check_payu_response(){
-        global $woocommerce;
-        if(isset($_REQUEST['txnid']) && isset($_REQUEST['mihpayid'])){
-            $order_id_time = $_REQUEST['txnid'];
-            $order_id = explode('_', $_REQUEST['txnid']);
-            $order_id = (int)$order_id[0];
-            if($order_id != ''){
-                try{
-                    $order = new WC_Order( $order_id );
-                    $merchant_id = $_REQUEST['key'];
-                    $amount = $_REQUEST['Amount'];
-                    $hash = $_REQUEST['hash'];
-
-                    $status = $_REQUEST['status'];
-                    $productinfo = "Order $order_id";
-                    echo $hash;
-                    echo "{$this->salt}|$status|||||||||||{$order->billing_email}|{$order->billing_first_name}|$productinfo|{$order->order_total}|$order_id_time|{$this->merchant_id}";
-                    $checkhash = hash('sha512', "{$this->salt}|$status|||||||||||{$order->billing_email}|{$order->billing_first_name}|$productinfo|{$order->order_total}|$order_id_time|{$this->merchant_id}");
-                    $transauthorised = false;
-                    if($order -> status !=='completed'){
-                        if($hash == $checkhash)
-                        {
-
-                          $status = strtolower($status);
-
-                            if($status=="success"){
-                                $transauthorised = true;
-                                $this -> msg['message'] = "Thank you for shopping with us. Your account has been charged and your transaction is successful. We will be shipping your order to you soon.";
-                                $this -> msg['class'] = 'woocommerce_message';
-                                if($order -> status == 'processing'){
-
-                                }else{
-                                    $order -> payment_complete();
-                                    $order -> add_order_note('PayU payment successful<br/>Unnique Id from PayU: '.$_REQUEST['mihpayid']);
-                                    $order -> add_order_note($this->msg['message']);
-                                    $woocommerce -> cart -> empty_cart();
-                                }
-                            }else if($status=="pending"){
-                                $this -> msg['message'] = "Thank you for shopping with us. Right now your payment staus is pending, We will keep you posted regarding the status of your order through e-mail";
-                                $this -> msg['class'] = 'woocommerce_message woocommerce_message_info';
-                                $order -> add_order_note('PayU payment status is pending<br/>Unnique Id from PayU: '.$_REQUEST['mihpayid']);
-                                $order -> add_order_note($this->msg['message']);
-                                $order -> update_status('on-hold');
-                                $woocommerce -> cart -> empty_cart();
-                            }
-                            else{
-                                $this -> msg['class'] = 'woocommerce_error';
-                                $this -> msg['message'] = "Thank you for shopping with us. However, the transaction has been declined.";
-                                $order -> add_order_note('Transaction Declined: '.$_REQUEST['Error']);
-                                //Here you need to put in the routines for a failed
-                                //transaction such as sending an email to customer
-                                //setting database status etc etc
-                            }
-                        }else{
-                            $this -> msg['class'] = 'error';
-                            $this -> msg['message'] = "Security Error. Illegal access detected";
-
-                            //Here you need to simply ignore this and dont need
-                            //to perform any operation in this condition
-                        }
-                        if($transauthorised==false){
-                            $order -> update_status('failed');
-                            $order -> add_order_note('Failed');
-                            $order -> add_order_note($this->msg['message']);
-                        }
-                        add_action('the_content', array(&$this, 'showMessage'));
-                    }}catch(Exception $e){
-                        // $errorOccurred = true;
-                        $msg = "Error";
-                    }
-
-            }
-
-
-
-        }
-
-    }
-
-    function showMessage($content){
-            return '<div class="box '.$this -> msg['class'].'-box">'.$this -> msg['message'].'</div>'.$content;
-        }
-     // get all pages
-    function get_pages($title = false, $indent = true) {
-        $wp_pages = get_pages('sort_column=menu_order');
-        $page_list = array();
-        if ($title) $page_list[] = $title;
-        foreach ($wp_pages as $page) {
-            $prefix = '';
-            // show indented child pages?
-            if ($indent) {
-                $has_parent = $page->post_parent;
-                while($has_parent) {
-                    $prefix .=  ' - ';
-                    $next_page = get_page($has_parent);
-                    $has_parent = $next_page->post_parent;
-                }
-            }
-            // add to page list array array
-            $page_list[$page->ID] = $prefix . $page->post_title;
-        }
-        return $page_list;
-    }
 }
+
    /**
      * Add the Gateway to WooCommerce
      **/
@@ -391,6 +328,7 @@ function woocommerce_asoribapay_init(){
         $methods[] = 'WC_AsoribaPay';
         return $methods;
     }
+
 
     add_filter('woocommerce_payment_gateways', 'woocommerce_add_asoribapay_gateway' );
 }
