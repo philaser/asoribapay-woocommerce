@@ -33,19 +33,32 @@ This section describes how to install the plugin and get it working.
 1. Go to the Woocommerce->Settings->Payments screen  and enable 'AsoribaPay'. Click set up to configure the plugin
 1. Place your API Key in the API Key field and click Save changes to get Started!
 
+== Test Mode ==
+
+From version 0.5, We have added a test/Sandbox mode for payment testing purposes.
+
+1. First go to Go to the Woocommerce->Settings->Payments screen  and enable 'Test mode'. Click on Save Changes to save
+1. Go to your websites Checkout Page , select AsoribaPay as your Payment Gateway and pay for the order.
+1. On the Payment Page, the card number should be **4111 1111 1111 1111** , the expiry date should be **any** future date and the CVC should be **005**
+
+
+* NOTE: **Please do not forget to disable Test mode before making payments live.**
 == Frequently Asked Questions ==
 
 = How do i get my API Key? =
 
 You will first need a Merchant account on [AsoribaPay](https://payment.asoriba.com/user/sign_up).
-You will then find your API KEy in your Dashboard
+You will then find your API Key in your Dashboard
 
-= I keep geting errors when making payments! =
+= I keep getting errors when making payments! =
 
 please contact us on support.asoriba.com(http://support.asoriba.com).
 
 
 == Changelog ==
+
+= 0.5 =
+* Added: Test/Sandbox mode functionality
 
 = 0.4 =
 * Added: Payment Image icon fuctionality

@@ -3,7 +3,7 @@
 * Plugin Name:AsoribaPay payment gateway for Woocommerce
 * Plugin URI: http://woocommerce.com/products/asoribapay-gateway/
 * Description: AsoribaPay gateway for woocommerce
-* Version: 0.4
+* Version: 0.5
 * Author: Woocommerce
 * Author URI: http://woocommerce.com/
 * Developer: Asoriba Inc
@@ -56,6 +56,8 @@ function woocommerce_asoribapay_init(){
       $this -> description = $this -> settings['description'];
       $this -> api_key = $this -> settings['api_key'];
       $this -> image = get_option( 'myprefix_image_url' );
+      $this -> testmode = $this -> settings['testmode'];
+      
       
 
       $this -> msg['message'] = "";
@@ -85,6 +87,14 @@ function woocommerce_asoribapay_init(){
                 'type'        => 'checkbox',
                 'description' => '',
                 'default'     => 'no'
+            ),
+            'testmode' => array(
+                'title'       => 'Test mode',
+                'label'   => __( 'Enable Test/Sandbox Mode', 'woocommerce' ),
+                'type'        => 'checkbox',
+                'description' => 'This enables the Sandbox mode which allows you to test a dummy card.',
+                'default'     => 'no',
+                'desc_tip'    => true,
             ),
             'title' => array(
                 'title'       => 'Title',
@@ -186,8 +196,19 @@ function woocommerce_asoribapay_init(){
 			/*
 			  * Array with parameters for API interaction
 			 */
+
+            if( $this -> testmode == 'yes'){
+
+                $payment_url = 'https://paymentsandbox.asoriba.com/payment/v1.0/initialize';
+                $pub_key = "e4RXkwokB45PLuZc9QxJ4zePFSibXrXCiCAyxsyn4ACgH-tzR4LauzK-FTWE";
+            } else {
+
+                $payment_url = 'https://payment.asoriba.com/payment/v1.0/initialize';
+                $pub_key = $this -> api_key;
+            }
+
 			$args = array(
-                'pub_key' =>  $this -> api_key ,
+                'pub_key' => $pub_key  ,
 				'amount' => $order->get_total(),
 				'tokenize' => true,
 				'metadata' => array(
@@ -205,9 +226,8 @@ function woocommerce_asoribapay_init(){
 			);
 
             
-
 		 
-			  $response = wp_remote_post('https://payment.asoriba.com/payment/v1.0/initialize', array(
+			  $response = wp_remote_post($payment_url, array(
 				'method' => 'POST',
 				'headers' => array('Content-Type' => 'application/json',
 									'Accept' => 'application/json',
