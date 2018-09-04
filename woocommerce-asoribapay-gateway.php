@@ -3,7 +3,7 @@
 * Plugin Name:AsoribaPay payment gateway for Woocommerce
 * Plugin URI: http://woocommerce.com/products/asoribapay-gateway/
 * Description: AsoribaPay gateway for woocommerce
-* Version: 0.5
+* Version: 0.6
 * Author: Woocommerce
 * Author URI: http://woocommerce.com/
 * Developer: Asoriba Inc
@@ -57,6 +57,7 @@ function woocommerce_asoribapay_init(){
       $this -> api_key = $this -> settings['api_key'];
       $this -> image = get_option( 'myprefix_image_url' );
       $this -> testmode = $this -> settings['testmode'];
+      $this -> tokenize = $this -> settings['tokenize'];
       
       
 
@@ -93,6 +94,14 @@ function woocommerce_asoribapay_init(){
                 'label'   => __( 'Enable Test/Sandbox Mode', 'woocommerce' ),
                 'type'        => 'checkbox',
                 'description' => 'This enables the Sandbox mode which allows you to test a dummy card.',
+                'default'     => 'no',
+                'desc_tip'    => true,
+            ),
+            'tokenize' => array(
+                'title'       => 'Tokenization',
+                'label'   => __( 'Enable Tokenization', 'woocommerce' ),
+                'type'        => 'checkbox',
+                'description' => 'This enables tokenization. Please leave disable if you have no idea about tokenization',
                 'default'     => 'no',
                 'desc_tip'    => true,
             ),
@@ -207,10 +216,18 @@ function woocommerce_asoribapay_init(){
                 $pub_key = $this -> api_key;
             }
 
+            if( $this -> tokenize == 'yes'){
+
+                $tokenize = true;
+            } else {
+
+                $tokenize = false;
+            }
+
 			$args = array(
                 'pub_key' => $pub_key  ,
 				'amount' => $order->get_total(),
-				'tokenize' => true,
+				'tokenize' => $tokenize,
 				'metadata' => array(
 					'order_id' => $order_data['id'],
 					'product_name' => 'Payment By ' . $order_data['billing']['first_name'] . ' ' . $order_data['billing']['last_name'] ,

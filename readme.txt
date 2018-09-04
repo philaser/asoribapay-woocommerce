@@ -57,6 +57,9 @@ please contact us on support.asoriba.com(http://support.asoriba.com).
 
 == Changelog ==
 
+= 0.6 =
+*Added: Tokenization option
+
 = 0.5 =
 * Added: Test/Sandbox mode functionality
 
